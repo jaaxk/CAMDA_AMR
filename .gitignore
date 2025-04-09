@@ -1,0 +1,12 @@
+train_data/fastp/*
+train_data/fastq/*
+de_novo_assembly/SPAdes-4.0.0-Linux
+de_novo_assembly/contigs
+de_novo_assembly/spades_output_isolate/*
+de_novo_assembly/contigs_by_species/*
+de_novo_assembly/spades_test
+align
+de_novo_assembly/test1
+dbgwas/klebsiella_bak
+dbgwas/klebsiella_pneumoniae/*
+
