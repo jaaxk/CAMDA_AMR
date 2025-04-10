@@ -9,4 +9,11 @@ align
 de_novo_assembly/test1
 dbgwas/klebsiella_bak
 dbgwas/klebsiella_pneumoniae/*
-
+dbgwas/neisseria_gonorrhoeae/*
+dbgwas/staphylococcus_aureus/*
+dbgwas/salmonella_enterica/*
+dbgwas/streptococcus_pneumoniae/*
+dbgwas/old_scripts_to_delete
+**/__pycache__
+dbgwas/res.txt
+model/amr_env

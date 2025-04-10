@@ -1,0 +1,51 @@
+/gpfs/scratch/jvaska/envs/amr_classifier/lib/python3.9/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/gpfs/scratch/jvaska/envs/amr_classifier/lib/python3.9/site-packages/transformers/utils/hub.py:123: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+INFO:root:Using device: cpu
+INFO:root:=== Starting data loading and preprocessing ===
+INFO:root:Loading data from CSV...
+INFO:root:
+=== Data Statistics ===
+INFO:root:
+Phenotype distribution:
+phenotype
+Resistant       21233
+Intermediate      813
+Susceptible       742
+Name: count, dtype: int64
+INFO:root:
+Sequence length statistics:
+INFO:root:Mean: 500.00
+INFO:root:Min: 500
+INFO:root:Max: 500
+INFO:root:
+num_hits statistics:
+INFO:root:Mean: 111.06
+INFO:root:Min: 1
+INFO:root:Max: 146
+INFO:root:Data preprocessing complete.
+INFO:root:=== Memory Stats at after data loading ===
+INFO:root:CPU Memory used: 465.79 MB
+INFO:root:=== Initializing tokenizer ===
+/gpfs/scratch/jvaska/envs/amr_classifier/lib/python3.9/site-packages/huggingface_hub/file_download.py:896: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
+  warnings.warn(
+INFO:root:=== Memory Stats at after tokenizer init ===
+INFO:root:CPU Memory used: 468.29 MB
+INFO:root:=== Creating datasets ===
+INFO:root:Initializing AMR Dataset...
+INFO:root:Using max_length of 125 for sequences
+INFO:root:=== Memory Stats at after train dataset creation ===
+INFO:root:CPU Memory used: 468.29 MB
+INFO:root:Initializing AMR Dataset...
+INFO:root:Using max_length of 125 for sequences
+/gpfs/scratch/jvaska/envs/amr_classifier/lib/python3.9/site-packages/torch/utils/data/dataloader.py:617: UserWarning: This DataLoader will create 2 worker processes in total. Our suggested max number of worker in current system is 1, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(
+INFO:root:=== Initializing model ===
+INFO:root:Loading DNABERT2 configuration...
+INFO:root:Attempting to load DNABERT2 model
+/gpfs/scratch/jvaska/envs/amr_classifier/lib/python3.9/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/gpfs/scratch/jvaska/envs/amr_classifier/lib/python3.9/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/cm/local/apps/slurm/var/spool/job995659/slurm_script: line 8: 1870351 Bus error               (core dumped) python train.py --data_path ../dbgwas/klebsiella_pneumoniae/klebsiella_pneumoniae_train_dataset_classifier.csv --output_dir ./klebsiella_pneumoniae
