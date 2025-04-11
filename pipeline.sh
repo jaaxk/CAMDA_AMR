@@ -1,16 +1,18 @@
 #!/bin/bash
 
+## Each must be run twice one for train one for test
+
 #get accession lists
 python metadata/get_accessions.py
 
 #download accessions
-./train_data/download_all.slurm
+./data/download_all.slurm
 
 #download failed files
-./train_data/download_remaining.slurm
+./data/download_remaining.slurm
 
 #run fastp
-./train_data/run_fastp.slurm
+./data/run_fastp.slurm
 
 ## de novo assembly
 

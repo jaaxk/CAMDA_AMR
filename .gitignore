@@ -1,5 +1,5 @@
-train_data/fastp/*
-train_data/fastq/*
+data/train_data/*
+data/test_data/*
 de_novo_assembly/SPAdes-4.0.0-Linux
 de_novo_assembly/contigs
 de_novo_assembly/spades_output_isolate/*
@@ -17,3 +17,10 @@ dbgwas/old_scripts_to_delete
 **/__pycache__
 dbgwas/res.txt
 model/amr_env
+dbgwas/acinetobacter_baumannii/*
+dbgwas/campylobacter_jejuni/*
+dbgwas/escherichia_coli/*
+dbgwas/pseudomonas_aeruginosa/*
+dbgwas/trashme_3324456_dsk_partitions_gatb/*
+model/klebsiella_pneumoniae/model_checkpoint.pt
+
