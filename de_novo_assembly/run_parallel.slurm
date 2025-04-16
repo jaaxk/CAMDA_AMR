@@ -9,7 +9,7 @@
 
 start_time=$(date +%s.%N)
 
-conda activate data_analysis
+conda activate bioinfo
 
 srun --ntasks=$SLURM_NNODES python -u parallel_denovo_assembly.py --fastq_dir ../data/test_data/fastp --metadata_path ../metadata/test_metadata.csv --isolate --outdir test_assemblies/spades_output_isolate
 

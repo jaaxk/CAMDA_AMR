@@ -93,6 +93,10 @@ def main():
     print(f"Saved {len(out_df)} sequences to {args.output}")
 
     finetune_df = out_df.drop(columns=["num_hits", "accession"])
+    finetune_df = finetune_df.rename(columns={'phenotype':'label'})
+    mapping = {'Resistant': 0, 'Intermediate': 1, 'Susceptible': 2}
+    finetune_df['label'] = finetune_df['label'].replace(mapping)
+    print(finetune_df.head())
     finetune_df.to_csv(args.output+'_finetune.csv', index=False)
 
 if __name__ == "__main__":
