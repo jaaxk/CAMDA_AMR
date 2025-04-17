@@ -6,8 +6,8 @@ finetune/bacteria_model
 finetune/dnabert2_env
 finetune/finetune_data
 finetune/output_*
-finetune/DNABERT_2
 model/output
+finetune/output/
 data/train_data/*
 data/test_data/*
 de_novo_assembly/SPAdes-4.0.0-Linux
