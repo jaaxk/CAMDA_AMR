@@ -1,12 +1,15 @@
 de_novo_assembly/test_assemblies/*
 dbgwas/datasets/*
-bacteria_model  dnabert2_env   model_files  output_2  run_finetune_ddp.slurm  test.py
-DNABERT_2       finetune_data  output_1     res.txt   run_finetune.slurm
-finetune/bacteria_model
+finetune/bacteria_model/*.pt
+finetune/bacteria_model/*.json
+finetune/bacteria_model/*.bin
+finetune/bacteria_model/*.pth
 finetune/dnabert2_env
 finetune/finetune_data
-finetune/output_*
+finetune/outputs/*
+finetune/DNABERT_2_to_delete
 model/output
+finetune/datasets/*
 finetune/output/
 data/train_data/*
 data/test_data/*
