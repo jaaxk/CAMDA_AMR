@@ -828,14 +828,14 @@ class BertForSequenceClassification(BertPreTrainedModel):
                               if config.classifier_dropout is not None else
                               config.hidden_dropout_prob)
         self.dropout = nn.Dropout(classifier_dropout)
-        #self.classifier = nn.Linear(config.hidden_size + 2, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size + 2, config.num_labels)
 
-        self.classifier = nn.Sequential(
+        """self.classifier = nn.Sequential(
             nn.Linear(config.hidden_size + 2, 256),
             nn.ReLU(),
             self.dropout,
             nn.Linear(256, config.num_labels)
-        )
+        )"""
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -879,7 +879,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
 
         pooled_output = outputs[1]
 
-        #pooled_output = self.dropout(pooled_output)
+        pooled_output = self.dropout(pooled_output)
 
         """print("pooled:", pooled_output.shape)
         print("num_hits:", num_hits.shape)
