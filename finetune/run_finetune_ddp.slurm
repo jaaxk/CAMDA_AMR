@@ -3,17 +3,17 @@
 #SBATCH -t 48:00:00
 #SBATCH --gres=gpu:4
 #SBATCH --mem 250G
-#SBATCH --output res.txt
+#SBATCH --output res1.txt
 
 conda activate dna
 
 #export DATA_PATH=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/finetune_data
-export DATA_PATH=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/datasets
+export DATA_PATH=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/datasets/combined_classifier_augmented_nooverlap
 export MAX_LENGTH=125
 #export LR=5e-5
 export num_gpu=4
 export MODEL_PATH=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/bacteria_model
-export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/output
+export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs
 export OMP_NUM_THREADS=16
 
 wandb login 0e16ac7c39d857e9bc3de95f06818dd4899bc8c1
@@ -21,15 +21,15 @@ wandb login 0e16ac7c39d857e9bc3de95f06818dd4899bc8c1
 cd DNABERT_2/finetune
 
 
-#for LR in 1e-3 3e-3 1e-4 3e-4 1e-5 3e-5 1e-6 3e-6; do
+for LR in 1e-3 3e-3 1e-4 3e-4 1e-5 3e-5 1e-6 3e-6; do
 
-    #export LR=$LR
-    #export WANDB_NAME=all_features_3layers_lr_${LR}
-    #export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs/output_all_features_3layers_lr_${LR}
+    export LR=$LR
+    export WANDB_NAME=all_features_regressiom_lr_${LR}
+    export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs/output_all_features_regressiom_lr_${LR}
 
-    export LR=3e-5
-    export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs/output_all_features_3layers_3e-5
-    export WANDB_NAME=all_features_3layers_3e-5
+    #export LR=3e-5
+    #export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs/output_all_features_nooverlap_regression
+    #export WANDB_NAME=all_features_augmented_nooverlap_regression_2
 
     torchrun --nproc_per_node=${num_gpu} train.py \
     --model_name_or_path ${MODEL_PATH} \
@@ -41,7 +41,7 @@ cd DNABERT_2/finetune
     --per_device_eval_batch_size 16 \
     --gradient_accumulation_steps 1 \
     --learning_rate ${LR} \
-    --num_train_epochs 20 \
+    --num_train_epochs 10 \
     --fp16 \
     --save_steps 200 \
     --output_dir ${OUT_DIR} \
@@ -53,4 +53,4 @@ cd DNABERT_2/finetune
     --log_level info \
     --find_unused_parameters False
 
-#done
+done

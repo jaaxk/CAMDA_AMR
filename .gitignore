@@ -9,6 +9,9 @@ finetune/finetune_data
 finetune/outputs/*
 finetune/DNABERT_2_to_delete
 model/output
+*/wandb/*
+finetune/DNABERT_2/sample_data
+finetune/DNABERT_2/finetune/wandb/
 finetune/datasets/*
 finetune/output/
 data/train_data/*
