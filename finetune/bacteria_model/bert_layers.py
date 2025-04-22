@@ -820,6 +820,9 @@ class BertForSequenceClassification(BertPreTrainedModel):
 
     def __init__(self, config):
         super().__init__(config)
+
+        print('Initializing CUSTOM BertForSequenceClassification')
+
         self.num_labels = config.num_labels
         self.config = config
 
@@ -836,6 +839,8 @@ class BertForSequenceClassification(BertPreTrainedModel):
             self.dropout,
             nn.Linear(256, config.num_labels)
         )"""
+
+        self.class_weights = torch.tensor([0.82621977, 1.24676733, 1.01256185], dtype=torch.float) #these values are from when the dataset was made with pandas using compute_class_weight
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -890,6 +895,8 @@ class BertForSequenceClassification(BertPreTrainedModel):
             num_hits,   # [batch_size, 1]
             species.unsqueeze(1),    # [batch_size] -> [batch_size, 1]
         ], dim=1))
+        
+        class_weights = self.class_weights.to(logits.device)
 
         loss = None
         if labels is not None:
@@ -909,13 +916,16 @@ class BertForSequenceClassification(BertPreTrainedModel):
                     loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
                     loss = loss_fct(logits, labels)
+                #print('PERFORMING REGRESSION')
             elif self.config.problem_type == 'single_label_classification':
-                loss_fct = nn.CrossEntropyLoss()
+                loss_fct = nn.CrossEntropyLoss(weight=class_weights)
                 loss = loss_fct(logits.view(-1, self.num_labels),
                                 labels.view(-1))
+                #print('PERFORMING SINGLE LABEL CLASSIFICATION')
             elif self.config.problem_type == 'multi_label_classification':
                 loss_fct = nn.BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
+                #print('PERFORMING MULTI LABEL CLASSIFICATION')
 
         if not return_dict:
             output = (logits,) + outputs[2:]

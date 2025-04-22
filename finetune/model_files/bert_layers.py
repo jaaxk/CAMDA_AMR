@@ -828,7 +828,16 @@ class BertForSequenceClassification(BertPreTrainedModel):
                               if config.classifier_dropout is not None else
                               config.hidden_dropout_prob)
         self.dropout = nn.Dropout(classifier_dropout)
-        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size + 2, config.num_labels)
+
+        """self.classifier = nn.Sequential(
+            nn.Linear(config.hidden_size + 2, 256),
+            nn.ReLU(),
+            self.dropout,
+            nn.Linear(256, config.num_labels)
+        )"""
+
+        self.class_weights = torch.tensor([0.75894528, 1.45499229, 1.00493111], dtype=torch.float) #these values are from when the dataset was made with pandas using compute_class_weight
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -846,6 +855,8 @@ class BertForSequenceClassification(BertPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        num_hits: Optional[torch.Tensor] = None,
+        species: Optional[torch.Tensor] = None,
     ) -> Union[Tuple[torch.Tensor], SequenceClassifierOutput]:
         # labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
         # Labels for computing the sequence classification/regression loss.
@@ -871,7 +882,18 @@ class BertForSequenceClassification(BertPreTrainedModel):
         pooled_output = outputs[1]
 
         pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
+
+        """print("pooled:", pooled_output.shape)
+        print("num_hits:", num_hits.shape)
+        print("species:", species.shape) """
+
+        logits = self.classifier(torch.cat([
+            pooled_output,
+            num_hits,   # [batch_size, 1]
+            species.unsqueeze(1),    # [batch_size] -> [batch_size, 1]
+        ], dim=1))
+        
+        class_weights = self.class_weights.to(logits.device)
 
         loss = None
         if labels is not None:
@@ -891,13 +913,16 @@ class BertForSequenceClassification(BertPreTrainedModel):
                     loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
                     loss = loss_fct(logits, labels)
+                #print('PERFORMING REGRESSION')
             elif self.config.problem_type == 'single_label_classification':
-                loss_fct = nn.CrossEntropyLoss()
+                loss_fct = nn.CrossEntropyLoss(weight=class_weights)
                 loss = loss_fct(logits.view(-1, self.num_labels),
                                 labels.view(-1))
+                #print('PERFORMING SINGLE LABEL CLASSIFICATION')
             elif self.config.problem_type == 'multi_label_classification':
                 loss_fct = nn.BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
+                #print('PERFORMING MULTI LABEL CLASSIFICATION')
 
         if not return_dict:
             output = (logits,) + outputs[2:]

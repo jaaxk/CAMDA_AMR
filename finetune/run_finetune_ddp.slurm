@@ -3,12 +3,12 @@
 #SBATCH -t 48:00:00
 #SBATCH --gres=gpu:4
 #SBATCH --mem 250G
-#SBATCH --output res1.txt
+#SBATCH --output res.txt
 
 conda activate dna
 
 #export DATA_PATH=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/finetune_data
-export DATA_PATH=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/datasets/combined_classifier_augmented_nooverlap
+export DATA_PATH=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/datasets/classifier_v2
 export MAX_LENGTH=125
 #export LR=5e-5
 export num_gpu=4
@@ -21,15 +21,15 @@ wandb login 0e16ac7c39d857e9bc3de95f06818dd4899bc8c1
 cd DNABERT_2/finetune
 
 
-for LR in 1e-3 3e-3 1e-4 3e-4 1e-5 3e-5 1e-6 3e-6; do
+#for LR in 1e-3 3e-3 1e-4 3e-4 1e-5 3e-5 1e-6 3e-6; do
 
-    export LR=$LR
-    export WANDB_NAME=all_features_regressiom_lr_${LR}
-    export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs/output_all_features_regressiom_lr_${LR}
+    #export LR=$LR
+    #export WANDB_NAME=all_features_regressiom_lr_${LR}
+    #export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs/output_all_features_regressiom_lr_${LR}
 
-    #export LR=3e-5
-    #export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs/output_all_features_nooverlap_regression
-    #export WANDB_NAME=all_features_augmented_nooverlap_regression_2
+    export LR=3e-5
+    export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs/new_dataset
+    export WANDB_NAME=new_dataset
 
     torchrun --nproc_per_node=${num_gpu} train.py \
     --model_name_or_path ${MODEL_PATH} \
@@ -53,4 +53,4 @@ for LR in 1e-3 3e-3 1e-4 3e-4 1e-5 3e-5 1e-6 3e-6; do
     --log_level info \
     --find_unused_parameters False
 
-done
+#done

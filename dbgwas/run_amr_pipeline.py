@@ -158,7 +158,10 @@ class AMRPipeline:
         cmd = (f'python {self.base_dir}/dbgwas/scripts/get_train_dataset.py --metadata {self.metadata_path} '
                f'--assembly_dir {contigs_path} '
                f'--blast_dir {dir_name}/blast_output '
-               f'--output {dir_name}/{dir_name}_train_dataset')
+               f'--output {dir_name}/{dir_name}_train_dataset '
+               f"--species '{species}'")
+
+        print(cmd)
         
         if os.system(cmd) != 0:
             raise RuntimeError(f"Failed to generate training dataset for {species}")
@@ -167,6 +170,7 @@ class AMRPipeline:
         """Run the complete pipeline for all specified species"""
         print(f"Starting AMR pipeline for {len(self.species)} species")
         
+        # Check prerequisites for each species
         for species in self.species:
             print(f"\n{'='*80}\nProcessing {species}\n{'='*80}")
             

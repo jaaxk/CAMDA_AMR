@@ -53,11 +53,16 @@ def main():
     parser.add_argument("--assembly_dir", required=True, help="Directory with all assembly FASTA files")
     parser.add_argument("--output", default="sequences", help="Output CSV path")
     parser.add_argument("--shuffle", action="store_true", help="Shuffle output rows")
+    parser.add_argument("--species", required=True, help="Species name to filter accessions (match genus_species column)"),
     args = parser.parse_args()
 
     accession_to_pheno = parse_metadata(args.metadata)
+    # Get all accessions for the requested species
+    df_meta = pd.read_csv(args.metadata)
+    species_accessions = set(df_meta[df_meta['genus_species'] == args.species]['accession'].unique())
     all_data = []
     hits_per_accession = []
+    accessions_in_all_data = set()
 
     for blast_file in os.listdir(args.blast_dir):
         if not blast_file.endswith(".tsv"):
@@ -83,7 +88,51 @@ def main():
 
         for seq in sequences:
             all_data.append((seq, phenotype, len(hits), accession))
-        
+            accessions_in_all_data.add(accession)
+
+    # Find accessions for this species not in all_data
+    missing_accessions = species_accessions - accessions_in_all_data
+    print(f"Number of accessions for species '{args.species}' not in all_data: {len(missing_accessions)}")
+
+    def extract_random_nonoverlapping_sequences(assembly_file, n=9, seq_len=500):
+        seqs = []
+        try:
+            seq_records = list(SeqIO.parse(assembly_file, "fasta"))
+        except Exception as e:
+            print(f"Error reading {assembly_file}: {e}")
+            return []
+        for record in seq_records:
+            contig_seq = record.seq
+            max_start = len(contig_seq) - seq_len
+            if max_start < 0:
+                continue
+            starts = list(range(0, max_start + 1, seq_len))
+            random.shuffle(starts)
+            count = 0
+            for start in starts:
+                if count >= n:
+                    break
+                seqs.append(str(contig_seq[start:start+seq_len]))
+                count += 1
+            if count >= n:
+                break
+        return seqs[:n]
+
+    for accession in missing_accessions:
+        assembly_path = os.path.join(args.assembly_dir, f"{accession}.fasta")
+        if not os.path.exists(assembly_path):
+            assembly_path = os.path.join(args.assembly_dir, f"{accession}.fa")
+        if not os.path.exists(assembly_path):
+            print(f"Missing assembly for accession {accession}")
+            continue
+        seqs = extract_random_nonoverlapping_sequences(assembly_path, n=9, seq_len=500)
+        print(f"Accession {accession}: extracted {len(seqs)} non-overlapping 500bp sequences.")
+        phenotype = accession_to_pheno.get(accession)
+        if phenotype is None:
+            print(f"Warning: phenotype not found for accession {accession}")
+            continue
+        all_data.extend([(seq, phenotype, 0, accession) for seq in seqs])
+
     if args.shuffle:
         print('Shuffling dataset')
         random.shuffle(all_data)
