@@ -7,6 +7,11 @@ from pathlib import Path
 import pandas as pd
 #from tqdm import tqdm
 
+blast_identity = 80 #Originally 85
+dbgwas_sig_level = 5e-5 #Originally 5e-6
+subseq_length = 1000 #originally 500
+min_seqs = 55
+
 # Default species list
 DEFAULT_SPECIES = [
     'Neisseria gonorrhoeae',
@@ -105,7 +110,7 @@ class AMRPipeline:
 
         # Read DBGWAS output and filter significant sequences
         dbgwas_output = pd.read_csv(dbgwas_output_file, sep='\t', index_col=False)
-        seqs = dbgwas_output[dbgwas_output['Significant?'] == 'Yes']['Sequence'].tolist()
+        seqs = dbgwas_output[dbgwas_output['p-value'] < dbgwas_sig_level]['Sequence'].tolist()
         
         if not seqs:
             print(f"Warning: No significant sequences found for {species}")
@@ -146,7 +151,7 @@ class AMRPipeline:
             # Run BLAST
             cmd = (f'blastn -query {sig_seqs} -db {db_dir}/{accession} '
                   f'-max_target_seqs 1 -outfmt "6 qseqid sseqid pident length '
-                  f'qstart qend sstart send sstrand bitscore" -perc_identity 85 '
+                  f'qstart qend sstart send sstrand bitscore" -perc_identity {blast_identity} '
                   f'-out {out_dir}/{accession}_hits.tsv')
             if os.system(cmd) != 0:
                 print(f"Warning: BLAST failed for {assembly}")
@@ -159,7 +164,9 @@ class AMRPipeline:
                f'--assembly_dir {contigs_path} '
                f'--blast_dir {dir_name}/blast_output '
                f'--output {dir_name}/{dir_name}_train_dataset '
-               f"--species '{species}'")
+               f"--species '{species}' "
+               f'--subseq_length {subseq_length} '
+               f'--min_seqs {min_seqs}')
 
         print(cmd)
         

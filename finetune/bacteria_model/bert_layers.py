@@ -840,7 +840,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
             nn.Linear(256, config.num_labels)
         )"""
 
-        self.class_weights = torch.tensor([0.82621977, 1.24676733, 1.01256185], dtype=torch.float) #these values are from when the dataset was made with pandas using compute_class_weight
+        self.class_weights = torch.tensor([0.77152396, 1.82478272, 0.86516153], dtype=torch.float) #these values are from when the dataset was made with pandas using compute_class_weight
 
         # Initialize weights and apply final processing
         self.post_init()

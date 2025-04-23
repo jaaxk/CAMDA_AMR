@@ -26,7 +26,11 @@ if __name__ == '__main__':
     parser.add_argument('--plasmid', action='store_true', help='assembles ONLY plasmids from WGS data')
     parser.add_argument('--numjobs', type=int, default=1)
     parser.add_argument('--job', type=int, default=0)
+    parser.add_argument('--single_only', action='store_true', help='treats ALL reads as SINGLE END (for use after all were assemblies were attempted and some paired end failed due to mismatched read lengths)')
     args = parser.parse_args()
+
+    if args.single_only:
+        print('Processing all assemblies as SINGLE END')
 
     meta_df = pd.read_csv(args.metadata_path)
     node_id = int(os.environ.get("SLURM_NODEID", 0))
@@ -63,7 +67,7 @@ if __name__ == '__main__':
         if accession not in meta_df['accession'].values:
             print(f'{accession} not found in metadata file')
             continue
-        if meta_df[meta_df['accession'] == accession].iloc[0]['layout'] == 'paired':
+        if meta_df[meta_df['accession'] == accession].iloc[0]['layout'] == 'paired' and not args.single_only:
             try:
                 reverse =  str(int(meta_df[meta_df['accession'] == accession].iloc[0]['reverse']))
                 process_paired(accession, reverse)
@@ -71,6 +75,7 @@ if __name__ == '__main__':
                 print(f'No reverse found for {accession}')
                 process_single(meta_df[meta_df['accession'] == accession].iloc[0]['file'], accession)                
         else:
+            print(f'Processing SINGLE END for {accession}')
             process_single(meta_df[meta_df['accession'] == accession].iloc[0]['file'], accession)
 
     print('Finished!')

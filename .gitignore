@@ -1,3 +1,4 @@
+dbgwas/5e-5_sig_seqs/
 de_novo_assembly/test_assemblies/*
 dbgwas/datasets/*
 finetune/bacteria_model/*.pt

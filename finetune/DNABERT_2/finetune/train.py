@@ -145,14 +145,25 @@ class SupervisedDataset(Dataset):
             labels = [label_mapping[d[-1]] for d in data]
             num_hits = [int(d[1]) for d in data]
             species = [d[3] for d in data]
-            le = LabelEncoder()
-            species_array = np.array(species)
-            species = le.fit_transform(species_array).tolist()
-            scaler = MinMaxScaler()
-            num_hits_array = np.array(num_hits).reshape(-1, 1)
-            num_hits = scaler.fit_transform(num_hits_array).flatten().tolist()
+            # Use a fixed mapping for species for consistency with inference
+            species_mapping = {
+                'klebsiella_pneumoniae': 0,
+                'streptococcus_pneumoniae': 1,
+                'escherichia_coli': 2,
+                'campylobacter_jejuni': 3,
+                'salmonella_enterica': 4,
+                'neisseria_gonorrhoeae': 5,
+                'staphylococcus_aureus': 6,
+                'pseudomonas_aeruginosa': 7,
+                'acinetobacter_baumannii': 8
+            }
+            species = [species_mapping[s] for s in species]
+            # Hardcoded normalization for num_hits: range 0-496
+            num_hits = [(float(nh) - 0.0) / (496.0 - 0.0) for nh in num_hits]
             self.num_hits = num_hits
             self.species = species
+            # Save mapping for reference:
+            self.species_mapping = species_mapping
 
         else:
             raise ValueError("Data format not supported.")
@@ -354,6 +365,13 @@ def train():
         os.makedirs(results_path, exist_ok=True)
         with open(os.path.join(results_path, "eval_results.json"), "w") as f:
             json.dump(results, f)
+
+    # Always save the best model at the end to output_dir/best -- NEW
+    best_dir = os.path.join(training_args.output_dir, "best")
+    os.makedirs(best_dir, exist_ok=True)
+    trainer.model.save_pretrained(best_dir)
+    if hasattr(trainer, 'tokenizer') and trainer.tokenizer is not None:
+        trainer.tokenizer.save_pretrained(best_dir)
 
 class WandbConfusionMatrixCallback(TrainerCallback):
     def on_evaluate(self, args, state, control, **kwargs):

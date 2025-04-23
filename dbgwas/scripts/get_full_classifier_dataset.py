@@ -6,7 +6,8 @@ import numpy as np
 
 
 #Combine datasets:
-data_dir = '../classifier_2'
+data_dir = '../datasets/classifier_2'
+out_dir = '/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/datasets/classifier_v2_traintestdev'
 
 # List to hold all cleaned DataFrames
 all_dfs = []
@@ -115,23 +116,33 @@ from sklearn.model_selection import train_test_split
 
 unique_accessions = df_augmented.drop_duplicates(subset='accession')
 
-train_acc, test_acc = train_test_split(
+train_acc, temp_acc = train_test_split(
     unique_accessions,
-    test_size=0.15,
+    test_size=0.20,
     stratify=unique_accessions['phenotype'],
+    random_state=42
+)
+
+dev_acc, test_acc = train_test_split(
+    temp_acc,
+    test_size=0.50,  # 50% of 20% = 10%
+    stratify=temp_acc['phenotype'],
     random_state=42
 )
 
 train_df = df_augmented[df_augmented['accession'].isin(train_acc['accession'])]
 test_df = df_augmented[df_augmented['accession'].isin(test_acc['accession'])]
+dev_df = df_augmented[df_augmented['accession'].isin(dev_acc['accession'])]
 
 train_df = train_df.sample(frac=1.0, random_state=42).reset_index(drop=True)
 test_df  = test_df.sample(frac=1.0, random_state=42).reset_index(drop=True)
+dev_df   = dev_df.sample(frac=1.0, random_state=42).reset_index(drop=True)
 
 
 #Output to csv:
-train_df.to_csv('train_augmented_noaccoverlap.csv', index=False)
-test_df.to_csv('test_augmented_noaccoverlap.csv', index=False)
+train_df.to_csv(os.path.join(out_dir, 'train.csv'), index=False)
+test_df.to_csv(os.path.join(out_dir, 'test.csv'), index=False)
+dev_df.to_csv(os.path.join(out_dir, 'dev.csv'), index=False)   
 
 
 #Print class weights for training:

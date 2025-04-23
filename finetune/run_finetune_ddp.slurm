@@ -3,13 +3,13 @@
 #SBATCH -t 48:00:00
 #SBATCH --gres=gpu:4
 #SBATCH --mem 250G
-#SBATCH --output res.txt
+#SBATCH --output res2.txt
 
 conda activate dna
 
 #export DATA_PATH=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/finetune_data
-export DATA_PATH=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/datasets/classifier_v2
-export MAX_LENGTH=125
+export DATA_PATH=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/datasets/classifier_v10_1000bp_upsamled
+export MAX_LENGTH=250 #Changed to 250 for new 1000bp subseq dataset
 #export LR=5e-5
 export num_gpu=4
 export MODEL_PATH=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/bacteria_model
@@ -28,8 +28,8 @@ cd DNABERT_2/finetune
     #export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs/output_all_features_regressiom_lr_${LR}
 
     export LR=3e-5
-    export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs/new_dataset
-    export WANDB_NAME=new_dataset
+    export OUT_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/outputs/classifier_v10_1000bp_upsamled_classweights
+    export WANDB_NAME=classifier_v10_1000bp_upsamled_classweights
 
     torchrun --nproc_per_node=${num_gpu} train.py \
     --model_name_or_path ${MODEL_PATH} \
@@ -54,3 +54,8 @@ cd DNABERT_2/finetune
     --find_unused_parameters False
 
 #done
+
+export BEST_MODEL_DIR="$(ls -d $OUT_DIR/checkpoint-* | sort -V | tail -n 1)"
+echo $BEST_MODEL_DIR
+cp /gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/finetune/model_files/* $BEST_MODEL_DIR
+python /gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/consensus_classifier/infer_accession_consensus.py --model_dir $BEST_MODEL_DIR --test_csv $DATA_PATH/test.csv --output_csv $OUT_DIR/accession_preds.csv
