@@ -33,6 +33,9 @@ class ModelArguments:
     lora_alpha: int = field(default=32, metadata={"help": "alpha for LoRA"})
     lora_dropout: float = field(default=0.05, metadata={"help": "dropout rate for LoRA"})
     lora_target_modules: str = field(default="query,value", metadata={"help": "where to perform LoRA"})
+    res_weight: float = field(default=None, metadata={"help": "weight for resistance"})
+    int_weight: float = field(default=None, metadata={"help": "weight for intermediate"})
+    sus_weight: float = field(default=None, metadata={"help": "weight for susceptible"})
 
 
 @dataclass
@@ -155,9 +158,13 @@ class SupervisedDataset(Dataset):
                 'neisseria_gonorrhoeae': 5,
                 'staphylococcus_aureus': 6,
                 'pseudomonas_aeruginosa': 7,
-                'acinetobacter_baumannii': 8
+                'acinetobacter_baumannii': 8 
             }
-            species = [species_mapping[s] for s in species]
+            try:
+                species = [species_mapping[s] for s in species]
+            except KeyError as e:
+                print('WARNING: Species input is numeric, skipping species mapping')
+                species = [int(s) for s in species]
             # Hardcoded normalization for num_hits: range 0-496
             num_hits = [(float(nh) - 0.0) / (496.0 - 0.0) for nh in num_hits]
             self.num_hits = num_hits
@@ -204,6 +211,7 @@ class DataCollatorForSupervisedDataset(object):
     """Collate examples for supervised fine-tuning."""
 
     tokenizer: transformers.PreTrainedTokenizer
+    class_weights: Optional[torch.Tensor] = None
 
     def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
         input_ids, labels = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels"))
@@ -226,6 +234,7 @@ class DataCollatorForSupervisedDataset(object):
             labels=labels,
             num_hits=num_hits,
             species=species,
+            class_weights=self.class_weights
         )
 """
 Manually calculate the accuracy, f1, matthews_correlation, precision, recall with sklearn.
@@ -281,6 +290,12 @@ def compute_metrics(eval_pred):
 def train():
     parser = transformers.HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    
+    class_weights = None
+    if model_args.res_weight is not None:   
+        class_weights = [model_args.res_weight, model_args.int_weight, model_args.sus_weight]
+        class_weights = torch.tensor(class_weights, dtype=torch.float)
+        print('USING CLASS WEIGHTS: ', class_weights)
 
     if torch.distributed.get_rank() == 0:
         wandb.init(
@@ -317,7 +332,7 @@ def train():
     test_dataset = SupervisedDataset(tokenizer=tokenizer, 
                                      data_path=os.path.join(data_args.data_path, "test.csv"), 
                                      kmer=data_args.kmer)
-    data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer)
+    data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer, class_weights=class_weights)
 
 
     # load model
