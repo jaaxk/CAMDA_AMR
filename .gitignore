@@ -1,4 +1,7 @@
 dbgwas/5e-5_sig_seqs/
+consensus_classifier/stats/*
+consensus_classifier/outputs/*
+*res.txt
 de_novo_assembly/test_assemblies/*
 dbgwas/datasets/*
 finetune/bacteria_model/*.pt

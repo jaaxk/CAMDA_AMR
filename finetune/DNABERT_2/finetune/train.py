@@ -172,6 +172,43 @@ class SupervisedDataset(Dataset):
             # Save mapping for reference:
             self.species_mapping = species_mapping
 
+        elif len(data[0]) == 6:
+            # sequence	num_hits	accession	species	antibiotic	phenotype
+            # num_hits already normalized ((float(num_hits) - 0.0) / (496.0 - 0.0)) and species, antibiotic, and phenotype converted to integer:
+            """ species_mapping = {
+                'klebsiella_pneumoniae': 0,
+                'streptococcus_pneumoniae': 1,
+                'escherichia_coli': 2,
+                'campylobacter_jejuni': 3,
+                'salmonella_enterica': 4,
+                'neisseria_gonorrhoeae': 5,
+                'staphylococcus_aureus': 6,
+                'pseudomonas_aeruginosa': 7,
+                'acinetobacter_baumannii': 8 
+                }
+            antibiotic_mapping = {'GEN': 1, 
+                'ERY': 2,
+                'CAZ': 3,
+                'TET': 4,
+                'tetracycline': 4
+            }
+
+            label_mapping = {'Resistant': 0, 'Intermediate': 0, 'Susceptible': 1} #treating intermediate as resistant
+
+            DONT UNCOMMENT THIS, THESE ARE ALREADY CONVERTED
+            
+            """
+
+            logging.warning("Performing classification with num_hits, species, and antibiotic...")
+            texts = [d[0] for d in data]
+            num_hits = [float(d[1]) for d in data]
+            species = [int(d[3]) for d in data]
+            antibiotic = [int(d[4]) for d in data]
+            labels = [int(d[-1]) for d in data]
+            self.num_hits = num_hits
+            self.species = species
+            self.antibiotic = antibiotic
+
         else:
             raise ValueError("Data format not supported.")
         
@@ -199,11 +236,13 @@ class SupervisedDataset(Dataset):
         self.labels = labels
         self.num_labels = len(set(labels))
 
+        logging.warning("Number of labels:", self.num_labels)
+
     def __len__(self):
         return len(self.input_ids)
 
     def __getitem__(self, i) -> Dict[str, torch.Tensor]:
-        return dict(input_ids=self.input_ids[i], labels=self.labels[i], num_hits=self.num_hits[i], species=self.species[i])
+        return dict(input_ids=self.input_ids[i], labels=self.labels[i], num_hits=self.num_hits[i], species=self.species[i], antibiotic=self.antibiotic[i])
 
 
 @dataclass
@@ -219,13 +258,15 @@ class DataCollatorForSupervisedDataset(object):
         # New: Extract additional fields
         num_hits = [instance["num_hits"] for instance in instances]
         species = [instance["species"] for instance in instances]
+        antibiotic = [instance["antibiotic"] for instance in instances]
 
         input_ids = torch.nn.utils.rnn.pad_sequence(
             input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id
         )
 
         num_hits = torch.tensor(num_hits, dtype=torch.float).unsqueeze(1)  # shape: (batch_size, 1)
-        species = torch.tensor(species, dtype=torch.long)
+        species = torch.tensor(species, dtype=torch.long).unsqueeze(1)
+        antibiotic = torch.tensor(antibiotic, dtype=torch.long).unsqueeze(1)
         labels = torch.Tensor(labels).long()
 
         return dict(
@@ -233,6 +274,7 @@ class DataCollatorForSupervisedDataset(object):
             attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
             labels=labels,
             num_hits=num_hits,
+            antibiotic=antibiotic,
             species=species,
             class_weights=self.class_weights
         )
@@ -293,21 +335,33 @@ def train():
     
     class_weights = None
     if model_args.res_weight is not None:   
-        class_weights = [model_args.res_weight, model_args.int_weight, model_args.sus_weight]
+        class_weights = [model_args.res_weight, model_args.sus_weight]
         class_weights = torch.tensor(class_weights, dtype=torch.float)
-        print('USING CLASS WEIGHTS: ', class_weights)
+        logging.warning('USING CLASS WEIGHTS: ', class_weights)
 
-    if torch.distributed.get_rank() == 0:
-        wandb.init(
-        project="AMR-DNABERT2-finetune",
-        name= os.getenv('WANDB_NAME', default=f'lr: {training_args.learning_rate}'),
-        config={
+    try:
+        if torch.distributed.get_rank() == 0:
+            wandb.init(
+            project="AMR-DNABERT2-finetune",
+            name= os.getenv('WANDB_NAME', default=f'lr: {training_args.learning_rate}'),
+            config={
             "learning_rate": training_args.learning_rate,
             "epochs": training_args.num_train_epochs,
             "per_device_train_batch_size": training_args.per_device_train_batch_size,
         }
         )
         #config = wandb.config
+    except RuntimeError:
+        print('Not using DDP!')
+        wandb.init(
+            project="AMR-DNABERT2-finetune",
+            name= os.getenv('WANDB_NAME', default=f'lr: {training_args.learning_rate}'),
+            config={
+            "learning_rate": training_args.learning_rate,
+            "epochs": training_args.num_train_epochs,
+            "per_device_train_batch_size": training_args.per_device_train_batch_size,
+            }
+        )
 
     # load tokenizer
     tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -390,16 +444,26 @@ def train():
 
 class WandbConfusionMatrixCallback(TrainerCallback):
     def on_evaluate(self, args, state, control, **kwargs):
-        if torch.distributed.get_rank() == 0 and hasattr(calculate_metric_with_sklearn, "last_preds"):
-            wandb.log({
-                "eval/confusion_matrix": wandb.plot.confusion_matrix(
-                    probs=None,
-                    y_true=calculate_metric_with_sklearn.last_labels,
-                    preds=calculate_metric_with_sklearn.last_preds,
-                    class_names = ['Resistant', 'Intermediate', 'Susceptible']
-                )
-            })
-
+        try:
+            if torch.distributed.get_rank() == 0 and hasattr(calculate_metric_with_sklearn, "last_preds"):
+                wandb.log({
+                    "eval/confusion_matrix": wandb.plot.confusion_matrix(
+                        probs=None,
+                        y_true=calculate_metric_with_sklearn.last_labels,
+                        preds=calculate_metric_with_sklearn.last_preds,
+                        class_names = ['Resistant', 'Susceptible']
+                            )
+                        })
+        except RuntimeError:
+            if hasattr(calculate_metric_with_sklearn, "last_preds"):
+                wandb.log({
+                    "eval/confusion_matrix": wandb.plot.confusion_matrix(
+                        probs=None,
+                        y_true=calculate_metric_with_sklearn.last_labels,
+                        preds=calculate_metric_with_sklearn.last_preds,
+                        class_names = ['Resistant', 'Susceptible']
+                            )
+                        })
 
 
 

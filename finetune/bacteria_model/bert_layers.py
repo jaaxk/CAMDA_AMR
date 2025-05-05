@@ -831,7 +831,14 @@ class BertForSequenceClassification(BertPreTrainedModel):
                               if config.classifier_dropout is not None else
                               config.hidden_dropout_prob)
         self.dropout = nn.Dropout(classifier_dropout)
-        self.classifier = nn.Linear(config.hidden_size + 2, config.num_labels)
+
+        species_emb_dim = 8
+        antibiotic_emb_dim = 8
+
+        self.species_emb = nn.Embedding(9, species_emb_dim)
+        self.antibiotic_emb = nn.Embedding(4, antibiotic_emb_dim)
+
+        self.classifier = nn.Linear(config.hidden_size + species_emb_dim + antibiotic_emb_dim + 1, config.num_labels)
 
         """self.classifier = nn.Sequential(
             nn.Linear(config.hidden_size + 2, 256),
@@ -840,7 +847,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
             nn.Linear(256, config.num_labels)
         )"""
 
-        self.class_weights = torch.tensor([0.77152396, 1.82478272, 0.86516153], dtype=torch.float) #these values are from when the dataset was made with pandas using compute_class_weight
+        #self.class_weights = torch.tensor([0.77774982, 2.98001703, 0.72533624], dtype=torch.float) #these values are from when the dataset was made with pandas using compute_class_weight
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -860,6 +867,8 @@ class BertForSequenceClassification(BertPreTrainedModel):
         return_dict: Optional[bool] = None,
         num_hits: Optional[torch.Tensor] = None,
         species: Optional[torch.Tensor] = None,
+        antibiotic: Optional[torch.Tensor] = None,
+        class_weights: Optional[torch.Tensor] = None,
     ) -> Union[Tuple[torch.Tensor], SequenceClassifierOutput]:
         # labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
         # Labels for computing the sequence classification/regression loss.
@@ -890,13 +899,18 @@ class BertForSequenceClassification(BertPreTrainedModel):
         print("num_hits:", num_hits.shape)
         print("species:", species.shape) """
 
+        species_emb = self.species_emb(species).squeeze(1)  # Convert from [batch_size, 1, emb_dim] to [batch_size, emb_dim]
+        antibiotic_emb = self.antibiotic_emb(antibiotic - 1).squeeze(1)  # Convert from [batch_size, 1, emb_dim] to [batch_size, emb_dim]
+
         logits = self.classifier(torch.cat([
             pooled_output,
             num_hits,   # [batch_size, 1]
-            species.unsqueeze(1),    # [batch_size] -> [batch_size, 1]
+            species_emb,    # [batch_size, species_emb_dim (8)]
+            antibiotic_emb,    # [batch_size, antibiotic_emb_dim (8)]
         ], dim=1))
         
-        class_weights = self.class_weights.to(logits.device)
+        if class_weights is not None:
+            class_weights = class_weights.to(logits.device)
 
         loss = None
         if labels is not None:
@@ -918,7 +932,10 @@ class BertForSequenceClassification(BertPreTrainedModel):
                     loss = loss_fct(logits, labels)
                 #print('PERFORMING REGRESSION')
             elif self.config.problem_type == 'single_label_classification':
-                loss_fct = nn.CrossEntropyLoss(weight=class_weights)
+                if class_weights is not None:
+                    loss_fct = nn.CrossEntropyLoss(weight=class_weights)
+                else:
+                    loss_fct = nn.CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels),
                                 labels.view(-1))
                 #print('PERFORMING SINGLE LABEL CLASSIFICATION')

@@ -8,11 +8,11 @@
 
 start_time=$(date +%s.%N)
 
-conda activate data_analysis
-srun --ntasks=$SLURM_NNODES python -u parallel_fastp.py --metadata_path ../metadata/test_metadata.csv --accessions test_data/test_accessions.txt --threads 16 --outdir test_data/fastp --indir test_data/fastq
+#conda activate data_analysis
+srun --ntasks=$SLURM_NNODES python -u parallel_fastp.py --metadata_path ../metadata/train_metadata.csv --accessions train_data/missing_accs.txt --threads 16 --outdir train_data/fastp --indir train_data/fastq
 
 #move any files that didnt fastp:
-for f in test_data/fastq/*; do fname=$(basename "$f"); [ ! -e "test_data/fastp/$fname" ] && mv "$f" test_data/fastp/; done
+for f in train_data/fastq/*; do fname=$(basename "$f"); [ ! -e "train_data/fastp/$fname" ] && mv "$f" train_data/fastp/; done
 
 conda activate bioinfo
 sbatch ../de_novo_assembly/run_parallel.slurm

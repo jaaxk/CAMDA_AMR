@@ -5,4 +5,4 @@
 #SBATCH -t 48:00:00           # Runtime limit: 48 hours
 #SBATCH -c 96                 # Number of CPU cores
 
-cat train_accessions.txt | xargs -n 1 -P 96 fasterq-dump --split-files --skip-technical --outdir ./fastq
+cat test_data/missing_accs_test.txt | xargs -n 1 -P 96 fasterq-dump --split-files --skip-technical --outdir ./test_data/fastq

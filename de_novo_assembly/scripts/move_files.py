@@ -4,6 +4,9 @@ import pandas as pd
 
 # Load the metadata
 metadata_path = '../metadata/train_metadata.csv'
+output_base = 'contigs_by_species'
+
+
 df = pd.read_csv(metadata_path, usecols=['accession', 'genus_species'])
 
 # Remove duplicates, keeping the first occurrence
@@ -13,7 +16,6 @@ df = df.drop_duplicates(subset='accession', keep='first')
 accession_to_species = dict(zip(df['accession'], df['genus_species']))
 
 # Prepare output base path
-output_base = 'contigs_by_species'
 os.makedirs(output_base, exist_ok=True)
 
 # Get all file names in 'contigs' directory
@@ -38,7 +40,7 @@ for filename in os.listdir(contigs_dir):
 
 # --- New logic: Check for missing accessions and move from fastp if needed ---
 output_base = 'contigs_by_species'
-fastp_dir = os.path.join('..', 'data', 'train_data', 'fastp')
+#fastp_dir = os.path.join('..', 'data', 'train_data', 'fastp')
 
 # Group metadata by species
 species_to_accessions = df.groupby('genus_species')['accession'].apply(set).to_dict()
@@ -55,7 +57,9 @@ for genus_species, expected_accessions in species_to_accessions.items():
     missing_accessions = expected_accessions - present_accessions
     print(f'Found {len(missing_accessions)} missing accessions for {genus_species}')
     for accession in missing_accessions:
-        # Search fastp_dir for a file containing the accession
+        print(f'accession {accession} missing from {genus_species} directory')
+        
+        """# Search fastp_dir for a file containing the accession
         found = False
         if os.path.exists(fastp_dir):
             for fastp_file in os.listdir(fastp_dir):
@@ -67,5 +71,5 @@ for genus_species, expected_accessions in species_to_accessions.items():
                     found = True
                     break
         if not found:
-            print(f'Warning: Could not find file for missing accession {accession} in fastp directory.')
+            print(f'Warning: Could not find file for missing accession {accession} in fastp directory.')"""
 

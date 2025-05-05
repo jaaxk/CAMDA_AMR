@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#extract contig files:
-CONTIGS_DIR="contigs"
-SPADES_DIR="spades_output_isolate"
+#extract contig files: CHECK THESE FOR TRAIN/TEST
+CONTIGS_DIR="/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/de_novo_assembly/contigs"
+SPADES_DIR="/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/de_novo_assembly/spades_output_isolate"
 mkdir -p "$CONTIGS_DIR"
 
 for subdir in "$SPADES_DIR"/*; do
