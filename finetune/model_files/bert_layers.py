@@ -908,7 +908,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
         print("species:", species.shape) """
 
         species_emb = self.species_emb(species).squeeze(1)  # Convert from [batch_size, 1, emb_dim] to [batch_size, emb_dim]
-        antibiotic_emb = self.antibiotic_emb(antibiotic - 1).squeeze(1)  # Convert from [batch_size, 1, emb_dim] to [batch_size, emb_dim]
+        antibiotic_emb = self.antibiotic_emb(antibiotic).squeeze(1)  # Convert from [batch_size, 1, emb_dim] to [batch_size, emb_dim]
 
         logits = self.classifier(torch.cat([
             pooled_output,
