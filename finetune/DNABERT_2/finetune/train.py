@@ -71,6 +71,8 @@ class TrainingArguments(transformers.TrainingArguments):
     eval_and_save_results: bool = field(default=True)
     save_model: bool = field(default=False)
     seed: int = field(default=42)
+    metric_for_best_model: str = field(default="f1") #New! gets best model based on macro averaged f1 score since we have class imbalance in dev and test sets
+    greater_is_better: bool = field(default=True) #This needs to be specified when metric_for_best_model is not loss
     
 
 def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: str):

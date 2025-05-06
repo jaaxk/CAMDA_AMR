@@ -24,11 +24,11 @@ def parse_metadata(camda_df):
         'acinetobacter_baumannii': 8 
     }
 
-    antibiotic_mapping = {'GEN': 1, 
-        'ERY': 2,
-        'CAZ': 3,
-        'TET': 4,
-        'tetracycline': 4
+    antibiotic_mapping = {'GEN': 0, 
+        'ERY': 1,
+        'CAZ': 2,
+        'TET': 3,
+        'tetracycline': 3
     }
 
     label_mapping = {'Resistant': 0, 'Intermediate': 0, 'Susceptible': 1} #treating intermediate as resistant
@@ -69,7 +69,7 @@ def extract_flanking_sequences(assembly_file, hits, flank, args):
         start = max(0, mid - flank)
         end = min(seq_len, mid + flank)
         region_seq = contig_seq[start:end]
-        if len(region_seq) < args.subseq_length:
+        if len(region_seq) < 25: #< args.subseq_length: #uncomment args.subseq_length to NOT get sequence at all if it is under subseq_len. I now have it so as long as its over 25bp we still take it. This prevents any (almost any) accessions from getting 0 sequences.
             continue
 
         if sstart > send or strand == 'minus':

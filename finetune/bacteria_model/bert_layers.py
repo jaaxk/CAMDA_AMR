@@ -831,6 +831,8 @@ class BertForSequenceClassification(BertPreTrainedModel):
                               if config.classifier_dropout is not None else
                               config.hidden_dropout_prob)
         self.dropout = nn.Dropout(classifier_dropout)
+        print("Dropout layer:", self.dropout)
+        print("Dropout probability:", self.dropout.p)
 
         species_emb_dim = 8
         antibiotic_emb_dim = 8
@@ -838,7 +840,13 @@ class BertForSequenceClassification(BertPreTrainedModel):
         self.species_emb = nn.Embedding(9, species_emb_dim)
         self.antibiotic_emb = nn.Embedding(4, antibiotic_emb_dim)
 
-        self.classifier = nn.Linear(config.hidden_size + species_emb_dim + antibiotic_emb_dim + 1, config.num_labels)
+        #self.classifier = nn.Linear(config.hidden_size + species_emb_dim + antibiotic_emb_dim + 1, config.num_labels)
+
+        self.classifier = nn.Sequential(
+            nn.Linear(config.hidden_size + species_emb_dim + antibiotic_emb_dim + 1, 128),
+            nn.ReLU(),
+            nn.Linear(128, config.num_labels)
+        )
 
         """self.classifier = nn.Sequential(
             nn.Linear(config.hidden_size + 2, 256),
@@ -893,7 +901,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
 
         pooled_output = outputs[1]
 
-        pooled_output = self.dropout(pooled_output)
+        pooled_output = self.dropout(pooled_output) 
 
         """print("pooled:", pooled_output.shape)
         print("num_hits:", num_hits.shape)
