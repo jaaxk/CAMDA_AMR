@@ -23,3 +23,8 @@
     - `species` was turned into a 4-dimensional embedding
     - species embedding and num_hits were concatenated with the 768-dim DNABERT2 embedding
 12. A 'consensus classifier' was created to predict a phenotype for each row in an accession and get the maximum of the predicted phenotypes per accession
+ 
+### Running:
+1. Make conda environment from `finetune/dna_env_2.yml`
+2. 
+
