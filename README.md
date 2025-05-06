@@ -24,7 +24,11 @@
     - species embedding and num_hits were concatenated with the 768-dim DNABERT2 embedding
 12. A 'consensus classifier' was created to predict a phenotype for each row in an accession and get the maximum of the predicted phenotypes per accession
  
-### Running:
+### Training:
 1. Make conda environment from `finetune/dna_env_2.yml`
-2. 
+   - `conda env create -f finetune/dna_env_2.yml`
+2. Change BASE_DIR to the base directory of the git repo in `get_final_sets/run_finetune_ddp.slurm`
+3. Pass data directory (containing train.csv, test.csv, and dev.csv) and run name to `get_final_sets/run_finetune_ddp.slurm`. This script should run training then accession-level evaluation on the best model (based on f1 score on dev set)
+   - `cd get_final_sets` 
+   - `sbatch run_finetune_ddp.slurm path/to/data/directory run_name`
 
