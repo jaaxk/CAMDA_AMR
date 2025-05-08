@@ -23,8 +23,6 @@ import transformers
     bert_layers = importlib.import_module('bert_layers')
     return bert_layers.BertForSequenceClassification """
 
-tokenizer_max_length = 250
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_dir', type=str, required=True, help='Path to finetune/outputs/... directory')
@@ -66,7 +64,7 @@ def main():
         with torch.no_grad():
             for start in tqdm(range(0, len(df), batch_size)):
                 batch = df.iloc[start:start+batch_size]
-                enc = tokenizer(list(batch['sequence']), padding=True, truncation=True, return_tensors='pt', max_length=tokenizer_max_length)
+                enc = tokenizer(list(batch['sequence']), padding=True, truncation=True, return_tensors='pt', max_length=args.model_max_length)
                 num_hits = batch['num_hits'].values
                 species = batch['species'].values
                 antibiotic = batch['antibiotic'].values

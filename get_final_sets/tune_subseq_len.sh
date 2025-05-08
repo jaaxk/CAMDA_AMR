@@ -10,16 +10,19 @@ export min_seqs=55
 export blast_identity=80
 export sig_threshold=5e-2
 
-SUBSEQ_LENGTHS=(1000)
+SUBSEQ_LENGTHS=(2000 4000 500)
 
 SCRIPT_PATH="/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/dbgwas/run_amr_pipeline.py"
 source /gpfs/scratch/jvaska/miniconda3/etc/profile.d/conda.sh #for conda envs to work
+find /gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/dbgwas -name "blast_output" -exec rm -rf {} +
+find /gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/dbgwas -name "*sig_sequences.fasta" -exec rm -f {} +
+find /gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/dbgwas -name "_classifier.csv" -exec rm -f {} +
 
 for subseq_length in "${SUBSEQ_LENGTHS[@]}"; do
     conda activate bioinfo
     echo "Running with --subseq_length ${subseq_length}"
-    export FINAL_DATASET_PATH="/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/get_final_sets/final_sets/subseq_length_${subseq_length}_pv4"
-    export RUN_NAME="subseq_length_${subseq_length}_pv4"
+    export FINAL_DATASET_PATH="/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/get_final_sets/final_sets/subseq_length_thresh_${sig_threshold}_${subseq_length}_pv4_mv4"
+    export RUN_NAME="subseq_length_thresh_${sig_threshold}_${subseq_length}_pv4_mv4"
     #find /gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/dbgwas -name "*sig_sequences.fasta" -exec rm -f {} +
 
     python -u "$SCRIPT_PATH" --dbgwas_sig_level "$sig_threshold" \

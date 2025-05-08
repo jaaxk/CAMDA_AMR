@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p a100-long
 #SBATCH -t 6:00:00
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:4
 #SBATCH --mem 250G
 #SBATCH --output logs/res_%j.txt
 
@@ -9,12 +9,11 @@ source /gpfs/scratch/jvaska/miniconda3/etc/profile.d/conda.sh #for conda envs to
 conda activate dna
 
 export BASE_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR
-export OUT_DIR=${BASE_DIR}/finetune/outputs/${RUN_NAME}
-
-
 export DATA_PATH=$1
 export RUN_NAME=$2
-export MAX_LENGTH=250 #Changed to 250 for new 1000bp subseq dataset
+export OUT_DIR=${BASE_DIR}/finetune/outputs/${RUN_NAME}
+echo $OUT_DIR
+export MAX_LENGTH=500 #Changed to 250 for new 1000bp subseq dataset *****
 export num_gpu=4
 export MODEL_PATH=${BASE_DIR}/finetune/bacteria_model
 export OMP_NUM_THREADS=16
@@ -38,7 +37,7 @@ torchrun --nproc_per_node=${num_gpu} ${BASE_DIR}/finetune/DNABERT_2/finetune/tra
 --per_device_eval_batch_size 16 \
 --gradient_accumulation_steps 1 \
 --learning_rate ${LR} \
---num_train_epochs 10 \
+--num_train_epochs 3 \
 --fp16 \
 --save_steps ${EVAL_AND_SAVE_STEPS} \
 --output_dir ${OUT_DIR} \
@@ -56,4 +55,4 @@ torchrun --nproc_per_node=${num_gpu} ${BASE_DIR}/finetune/DNABERT_2/finetune/tra
 export BEST_MODEL_DIR=$OUT_DIR/best
 echo "Running consensus evaluation with model $BEST_MODEL_DIR"
 cp ${BASE_DIR}/finetune/model_files/* $BEST_MODEL_DIR
-python ${BASE_DIR}/consensus_classifier/infer_accession_consensus.py --model_dir $BEST_MODEL_DIR --test_csv $DATA_PATH/test.csv --output_csv $OUT_DIR/accession_preds.csv
+python ${BASE_DIR}/consensus_classifier/infer_accession_consensus.py --model_dir $BEST_MODEL_DIR --test_csv $DATA_PATH/test.csv --output_csv $OUT_DIR/accession_preds.csv --model_max_length ${MAX_LENGTH}
