@@ -22,7 +22,7 @@ DEFAULT_SPECIES = [
 ]
 
 class AMRPipeline:
-    def __init__(self, metadata_path, base_dir, threads=96, species=None, subseq_length=1000, min_seqs=None, blast_identity=None, dbgwas_sig_level=None, contigs_dir=None):
+    def __init__(self, metadata_path, base_dir, threads=96, species=None, subseq_length=1000, min_seqs=None, blast_identity=None, dbgwas_sig_level=None, contigs_dir=None, test_set=False):
         self.metadata_path = metadata_path
         self.base_dir = Path(base_dir)
         self.threads = threads
@@ -33,10 +33,13 @@ class AMRPipeline:
         self.blast_identity = blast_identity
         self.dbgwas_sig_level = dbgwas_sig_level
         self.contigs_dir = Path(contigs_dir)
+        self.test_set = test_set
 
         self.metadata_df['genus_species'] = self.metadata_df['genus'].str.lower() + '_' + self.metadata_df['species'].str.lower()
 
         print(f"\nPipeline initialized for species: {self.species}")
+        if self.test_set:
+            print("Running on TEST set (no ground truth)")
         print(f"Metadata file: {self.metadata_path}")
         print(f"Base directory: {self.base_dir}")
         print(f"Number of threads: {self.threads}")
@@ -208,13 +211,19 @@ class AMRPipeline:
         """Generate training dataset using get_train_dataset.py"""
         print(f"\n📚 Generating training dataset for {species}")
 
+        if self.test_set:
+            out_name = f'{dir_name}_test_dataset'
+        else:
+            out_name = f'{dir_name}_train_dataset'
+
         cmd = (f'python {self.base_dir}/dbgwas/scripts/get_train_dataset.py --camda_dataset {self.metadata_path} '
                f'--assembly_dir {contigs_path} '
                f'--blast_dir {os.path.join(self.base_dir, "dbgwas", dir_name, "blast_output")} '
-               f'--output {os.path.join(self.base_dir, "dbgwas", dir_name, f"{dir_name}_train_dataset")} '
+               f'--output {os.path.join(self.base_dir, "dbgwas", dir_name, out_name)} '
                f"--species '{species}' "
                f'--subseq_length {self.subseq_length} '
-               f'--min_seqs {self.min_seqs}')
+               f'--min_seqs {self.min_seqs} '
+               f'--test_set {self.test_set}')
 
         print(cmd)
         
@@ -239,7 +248,7 @@ class AMRPipeline:
                 os.makedirs(full_dir_name)
 
             # Run pipeline steps
-            if not os.path.exists(f'{full_dir_name}/dbgwas_output/textualOutput/all_comps_nodes_info.tsv'):
+            if not os.path.exists(f'{full_dir_name}/dbgwas_output/textualOutput/all_comps_nodes_info.tsv') and not self.test_set:
                 self.run_dbgwas(species, dir_name, contigs_path)
             else:
                 print(f" DBGWAS already completed for {species}")
@@ -255,30 +264,43 @@ class AMRPipeline:
             else:
                 print(f" BLAST already completed for {species}")
             
-            if not os.path.exists(f'{full_dir_name}/{dir_name}_train_dataset_classifier.csv'):
-                self.get_train_dataset(species, dir_name, contigs_path) # extract flanking sequences
+            if not self.test_set:
+                if not os.path.exists(f'{full_dir_name}/{dir_name}_train_dataset_classifier.csv'):
+                    self.get_train_dataset(species, dir_name, contigs_path) # extract flanking sequences
+                else:
+                    print(f" Training dataset already extracted for {species}")
             else:
-                print(f" Training dataset already extracted for {species}")
-                
+                if not os.path.exists(f'{full_dir_name}/{dir_name}_test_dataset_classifier.csv'):
+                    self.get_train_dataset(species, dir_name, contigs_path) # extract flanking sequences
+                else:
+                    print(f" Test dataset already extracted for {species}")
+
             print(f"\n✅ Successfully completed pipeline for {species}")
 
-            df = pd.read_csv(f'{full_dir_name}/{dir_name}_train_dataset_classifier.csv')
-            num_unique_accs = len(df['accession'].unique())
-            print(f" Number of unique accessions in training dataset: {num_unique_accs}")
-            if num_unique_accs < 500:
-                print(f" WARNING: Not enough unique accessions in training dataset for {species} !!!!")
+            if not self.test_set:
+                df = pd.read_csv(f'{full_dir_name}/{dir_name}_train_dataset_classifier.csv')
+                num_unique_accs = len(df['accession'].unique())
+                print(f" Number of unique accessions in training dataset: {num_unique_accs}")
+                if num_unique_accs < 500:
+                    print(f" WARNING: Not enough unique accessions in training dataset for {species} !!!!")
+            else:
+                df = pd.read_csv(f'{full_dir_name}/{dir_name}_test_dataset_classifier.csv')
+                num_unique_accs = len(df['accession'].unique())
+                print(f" Number of unique accessions in test dataset: {num_unique_accs}")
+                if num_unique_accs < 500:
+                    print(f" WARNING: Not enough unique accessions in test dataset for {species} !!!!")
 
                 
 
 
             
             
-                
+            
 
 def main():
     parser = argparse.ArgumentParser(description="AMR Pipeline for multiple species")
     parser.add_argument("--metadata", default="/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/metadata/training_dataset.csv",
-                      help="Path to metadata CSV file")
+                      help="Path to metadata CSV file (straight from CAMDA)")
     parser.add_argument("--base-dir", default="/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR",
                       help="Base directory for the project")
     parser.add_argument("--threads", type=int, default=96,
@@ -295,6 +317,8 @@ def main():
                       help="p-value cutoff for DBGWAS results")
     parser.add_argument("--contigs_dir", type=str,
                       help="Directory containing contigs", default="/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/de_novo_assembly/contigs_by_species")
+    parser.add_argument("--test_set", action="store_true", default=False,
+                      help="Run on for test set (no ground truth)")
     
     args = parser.parse_args()
     
@@ -308,7 +332,8 @@ def main():
         min_seqs=args.min_seqs,
         blast_identity=args.blast_identity,
         dbgwas_sig_level=args.dbgwas_sig_level,
-        contigs_dir=args.contigs_dir
+        contigs_dir=args.contigs_dir,
+        test_set=args.test_set
     )
     
     pipeline.run_pipeline()

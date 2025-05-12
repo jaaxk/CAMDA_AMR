@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p a100-long
-#SBATCH -t 32:00:00
+#SBATCH -t 48:00:00
 #SBATCH --gres=gpu:4
 #SBATCH --mem 250G
 #SBATCH --output logs/res_%j.txt
@@ -10,9 +10,9 @@ conda activate dna
 
 export BASE_DIR=/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR
 export DATA_PATH=$1
-export RUN_NAME=$2
+export OG_RUN_NAME=$2
 
-export MAX_LENGTH=250 #Changed to 250 for new 1000bp subseq dataset
+export MAX_LENGTH=1000 #Changed to 250 for new 1000bp subseq dataset
 export num_gpu=4
 export MODEL_PATH=${BASE_DIR}/finetune/bacteria_model_perspecies
 export OMP_NUM_THREADS=16
@@ -25,8 +25,8 @@ wandb login 0e16ac7c39d857e9bc3de95f06818dd4899bc8c1
 
 for d in $(find $DATA_PATH -type d); do
     echo "Running finetuning for $d"
-    export RUN_NAME=${RUN_NAME}_${d##*/}
-    export OUT_DIR=${BASE_DIR}/finetune/outputs/${RUN_NAME}
+    export RUN_NAME=${OG_RUN_NAME}_${d##*/}
+    export OUT_DIR=${BASE_DIR}/finetune/outputs/${OG_RUN_NAME}/${d##*/}
     export WANDB_NAME=${RUN_NAME}
 
     torchrun --nproc_per_node=${num_gpu} ${BASE_DIR}/finetune/DNABERT_2/finetune/train_perspecies.py \
@@ -56,5 +56,8 @@ for d in $(find $DATA_PATH -type d); do
     cp ${BASE_DIR}/finetune/model_files_perspecies/* $BEST_MODEL_DIR
     python ${BASE_DIR}/consensus_classifier/infer_accession_consensus.py --model_dir $BEST_MODEL_DIR --test_csv $DATA_PATH/test.csv --output_csv $OUT_DIR/accession_preds.csv --model_max_length ${MAX_LENGTH}
 done
+
+python ${BASE_DIR}/consensus_classifier/infer_perspecies.py --models_dir ${BASE_DIR}/finetune/outputs/${OG_RUN_NAME} --test_csv $DATA_PATH/test.csv --output_csv ${BASE_DIR}/finetune/outputs/${OG_RUN_NAME}/perspecies_preds.csv
+
 
 

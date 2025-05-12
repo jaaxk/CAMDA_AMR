@@ -3,9 +3,9 @@ import shutil
 import pandas as pd
 
 # Load the metadata
-metadata_path = '../metadata/train_metadata.csv'
-output_base = 'contigs_by_species'
-
+metadata_path = '/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/metadata/test_metadata.csv'
+output_base = '/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/de_novo_assembly/test_assemblies/contigs_by_species'
+contigs_dir = '/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/de_novo_assembly/test_assemblies/contigs'
 
 df = pd.read_csv(metadata_path, usecols=['accession', 'genus_species'])
 
@@ -19,7 +19,6 @@ accession_to_species = dict(zip(df['accession'], df['genus_species']))
 os.makedirs(output_base, exist_ok=True)
 
 # Get all file names in 'contigs' directory
-contigs_dir = 'contigs'
 for filename in os.listdir(contigs_dir):
     if filename.endswith('.fasta'):
         accession = filename.split('.')[0]

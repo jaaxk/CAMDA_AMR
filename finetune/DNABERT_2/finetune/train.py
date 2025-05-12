@@ -188,11 +188,11 @@ class SupervisedDataset(Dataset):
                 'pseudomonas_aeruginosa': 7,
                 'acinetobacter_baumannii': 8 
                 }
-            antibiotic_mapping = {'GEN': 1, 
-                'ERY': 2,
-                'CAZ': 3,
-                'TET': 4,
-                'tetracycline': 4
+            antibiotic_mapping = {'GEN': 0, 
+                'ERY': 1,
+                'CAZ': 2,
+                'TET': 3,
+                'tetracycline': 3
             }
 
             label_mapping = {'Resistant': 0, 'Intermediate': 0, 'Susceptible': 1} #treating intermediate as resistant

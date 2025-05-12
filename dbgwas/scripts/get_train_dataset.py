@@ -6,8 +6,11 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 
 
-def parse_metadata(camda_df):
-    accession_to_pheno = camda_df.drop_duplicates(subset="accession").set_index("accession")["phenotype"].to_dict()
+def parse_metadata(camda_df, args):
+    if not args.test_set:   
+        accession_to_pheno = camda_df.drop_duplicates(subset="accession").set_index("accession")["phenotype"].to_dict()
+    else:
+        accession_to_pheno = {}
     accession_to_antibiotic = camda_df.drop_duplicates(subset="accession").set_index("accession")["antibiotic"].to_dict()
     accession_to_species = camda_df.drop_duplicates(subset="accession").set_index("accession")["genus_species"].to_dict()
 
@@ -35,7 +38,8 @@ def parse_metadata(camda_df):
 
     accession_to_species = {k: species_mapping[v] for k, v in accession_to_species.items()}
     accession_to_antibiotic = {k: antibiotic_mapping[v] for k, v in accession_to_antibiotic.items()}
-    accession_to_pheno = {k: label_mapping[v] for k, v in accession_to_pheno.items()}
+    if not args.test_set:
+        accession_to_pheno = {k: label_mapping[v] for k, v in accession_to_pheno.items()}
 
     return accession_to_pheno, accession_to_antibiotic, accession_to_species
 
@@ -89,13 +93,16 @@ def main():
     parser.add_argument("--subseq_length", type=int, help="Length of subsequence to extract")
     parser.add_argument("--min_seqs", type=int, default=55, help="Minimum number of sequences per accession")
     parser.add_argument("--camda_dataset", type=str, default=None, help="Original dataset from CAMDA (for antibiotic, phenotype and measurement value info)" )
+    parser.add_argument("--test_set", type=bool, default=False, help="Run on for test set (no ground truth)")
     #parser.add_argument("--include_measurement", action="store_true", help="Include measurement value in output")
     args = parser.parse_args()
+    if args.test_set:
+        print("Running on TEST set (no ground truth)")
 
     df_meta = pd.read_csv(args.camda_dataset)
     df_meta['genus_species'] = df_meta['genus'].str.lower() + '_' + df_meta['species'].str.lower()
 
-    accession_to_pheno, accession_to_antibiotic, accession_to_species = parse_metadata(df_meta)
+    accession_to_pheno, accession_to_antibiotic, accession_to_species = parse_metadata(df_meta, args)
     # Get all accessions for the requested species
     species_accessions = set(df_meta[df_meta['genus_species'] == args.species]['accession'].unique())
 
@@ -113,11 +120,14 @@ def main():
             continue
 
         accession = blast_file.split('_')[0]
-        phenotype = accession_to_pheno.get(accession)
+        if not args.test_set:
+            phenotype = accession_to_pheno.get(accession)
+        else:
+            phenotype = None
         antibiotic = accession_to_antibiotic.get(accession)
         species = accession_to_species.get(accession)
 
-        if phenotype is None:
+        if phenotype is None and not args.test_set:
             print(f"Skipping {accession} (phenotype not found in metadata)")
             continue
 
@@ -134,7 +144,10 @@ def main():
         sequences = extract_flanking_sequences(assembly_path, hits, flank=args.subseq_length//2, args=args)
 
         for seq in sequences:
-            all_data.append((seq, normalized_num_hits, accession, species, antibiotic, phenotype))
+            if not args.test_set:
+                all_data.append((seq, normalized_num_hits, accession, species, antibiotic, phenotype))
+            else:
+                all_data.append((seq, normalized_num_hits, accession, species, antibiotic))
             accessions_in_all_data.add(accession)
 
     # Find accessions for this species not in all_data
@@ -168,7 +181,10 @@ def main():
     # Add missing accessions
     for accession in missing_accessions:
 
-        phenotype = accession_to_pheno.get(accession)
+        if not args.test_set:
+            phenotype = accession_to_pheno.get(accession)
+        else:
+            phenotype = None
         antibiotic = accession_to_antibiotic.get(accession)
         species = accession_to_species.get(accession)
 
@@ -180,11 +196,14 @@ def main():
             continue
         seqs = extract_random_nonoverlapping_sequences(assembly_path, n=args.min_seqs, seq_len=args.subseq_length)
         print(f"Accession {accession}: extracted {len(seqs)} non-overlapping {args.subseq_length}bp sequences.")
-        if phenotype is None:
+        if phenotype is None and not args.test_set:
             print(f"Warning: phenotype not found for accession {accession}")
             continue
 
-        all_data.extend([(seq, 0, accession, species, antibiotic, phenotype) for seq in seqs])
+        if not args.test_set:
+            all_data.extend([(seq, 0, accession, species, antibiotic, phenotype) for seq in seqs])
+        else:
+            all_data.extend([(seq, 0, accession, species, antibiotic) for seq in seqs])
 
     # Top up accessions with < min_seqs sequences
     from collections import Counter
@@ -194,7 +213,10 @@ def main():
         num_hits = accession_counts.get(accession, 0)
         if 0 <= num_hits < args.min_seqs:
 
-            phenotype = accession_to_pheno.get(accession)
+            if not args.test_set:
+                phenotype = accession_to_pheno.get(accession)
+            else:
+                phenotype = None
             antibiotic = accession_to_antibiotic.get(accession)
             species = accession_to_species.get(accession)
 
@@ -207,17 +229,23 @@ def main():
                 continue
             seqs = extract_random_nonoverlapping_sequences(assembly_path, n=n_needed, seq_len=args.subseq_length)
             print(f"Topping up accession {accession}: extracted {len(seqs)} additional non-overlapping {args.subseq_length}bp sequences.")
-            if phenotype is None:
+            if phenotype is None and not args.test_set:
                 print(f"Warning: phenotype not found for accession {accession} (for top-up)")
                 continue
             normalized_num_hits = normalize_num_hits(num_hits)
-            all_data.extend([(seq, normalized_num_hits, accession, species, antibiotic, phenotype) for seq in seqs])
+            if not args.test_set:
+                all_data.extend([(seq, normalized_num_hits, accession, species, antibiotic, phenotype) for seq in seqs])
+            else:
+                all_data.extend([(seq, normalized_num_hits, accession, species, antibiotic) for seq in seqs])
 
     if args.shuffle:
         print('Shuffling dataset')
         random.shuffle(all_data)
-
-    out_df = pd.DataFrame(all_data, columns=["sequence", "num_hits", "accession", "species", "antibiotic", "phenotype"])
+    
+    if not args.test_set:
+        out_df = pd.DataFrame(all_data, columns=["sequence", "num_hits", "accession", "species", "antibiotic", "phenotype"])
+    else:
+        out_df = pd.DataFrame(all_data, columns=["sequence", "num_hits", "accession", "species", "antibiotic"])
     out_df.to_csv(args.output+'_classifier.csv', index=False)
     print(f"Saved {len(out_df)} sequences to {args.output}")
 

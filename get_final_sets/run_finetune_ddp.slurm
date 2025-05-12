@@ -13,7 +13,7 @@ export DATA_PATH=$1
 export RUN_NAME=$2
 export OUT_DIR=${BASE_DIR}/finetune/outputs/${RUN_NAME}
 echo $OUT_DIR
-export MAX_LENGTH=500 #Changed to 250 for new 1000bp subseq dataset *****
+export MAX_LENGTH=250 #Changed to 250 for new 1000bp subseq dataset *****
 export num_gpu=4
 export MODEL_PATH=${BASE_DIR}/finetune/bacteria_model
 export OMP_NUM_THREADS=16
