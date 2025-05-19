@@ -8,7 +8,10 @@ from Bio.Seq import Seq
 
 def parse_metadata(camda_df, args):
     if not args.test_set:   
-        accession_to_pheno = camda_df.drop_duplicates(subset="accession").set_index("accession")["phenotype"].to_dict()
+        if args.measurement_value:
+            accession_to_pheno = camda_df.drop_duplicates(subset="accession").set_index("accession")["measurement_value"].to_dict()
+        else:
+            accession_to_pheno = camda_df.drop_duplicates(subset="accession").set_index("accession")["phenotype"].to_dict()
     else:
         accession_to_pheno = {}
     accession_to_antibiotic = camda_df.drop_duplicates(subset="accession").set_index("accession")["antibiotic"].to_dict()
@@ -38,7 +41,7 @@ def parse_metadata(camda_df, args):
 
     accession_to_species = {k: species_mapping[v] for k, v in accession_to_species.items()}
     accession_to_antibiotic = {k: antibiotic_mapping[v] for k, v in accession_to_antibiotic.items()}
-    if not args.test_set:
+    if not args.test_set and not args.measurement_value:
         accession_to_pheno = {k: label_mapping[v] for k, v in accession_to_pheno.items()}
 
     return accession_to_pheno, accession_to_antibiotic, accession_to_species
@@ -93,11 +96,16 @@ def main():
     parser.add_argument("--subseq_length", type=int, help="Length of subsequence to extract")
     parser.add_argument("--min_seqs", type=int, default=55, help="Minimum number of sequences per accession")
     parser.add_argument("--camda_dataset", type=str, default=None, help="Original dataset from CAMDA (for antibiotic, phenotype and measurement value info)" )
-    parser.add_argument("--test_set", type=bool, default=False, help="Run on for test set (no ground truth)")
+    parser.add_argument("--test_set", action="store_true", help="Run on for test set (no ground truth)")
+    parser.add_argument("--measurement_value", action="store_true", help="Use measurement value instead of phenotype")
+    parser.add_argument("--top_up", action="store_true", help="Top up if hits is under min seqs but greater than 0")
     #parser.add_argument("--include_measurement", action="store_true", help="Include measurement value in output")
     args = parser.parse_args()
     if args.test_set:
         print("Running on TEST set (no ground truth)")
+
+    if args.measurement_value:
+        print("Running for MEASUREMENT VALUE (regression)")
 
     df_meta = pd.read_csv(args.camda_dataset)
     df_meta['genus_species'] = df_meta['genus'].str.lower() + '_' + df_meta['species'].str.lower()
@@ -205,48 +213,56 @@ def main():
         else:
             all_data.extend([(seq, 0, accession, species, antibiotic) for seq in seqs])
 
-    # Top up accessions with < min_seqs sequences
-    from collections import Counter
-    accession_counts = Counter([row[2] for row in all_data])
-    for accession in sorted(species_accessions & accessions_in_all_data):
+    if args.top_up:
+        # Top up accessions with < min_seqs sequences
+        from collections import Counter
+        accession_counts = Counter([row[2] for row in all_data])
+        for accession in sorted(species_accessions & accessions_in_all_data):
 
-        num_hits = accession_counts.get(accession, 0)
-        if 0 <= num_hits < args.min_seqs:
+            num_hits = accession_counts.get(accession, 0)
+            if 0 <= num_hits < args.min_seqs:
 
-            if not args.test_set:
-                phenotype = accession_to_pheno.get(accession)
-            else:
-                phenotype = None
-            antibiotic = accession_to_antibiotic.get(accession)
-            species = accession_to_species.get(accession)
+                if not args.test_set:
+                    phenotype = accession_to_pheno.get(accession)
+                else:
+                    phenotype = None
+                antibiotic = accession_to_antibiotic.get(accession)
+                species = accession_to_species.get(accession)
 
-            n_needed = args.min_seqs - num_hits
-            assembly_path = os.path.join(args.assembly_dir, f"{accession}.fasta")
-            if not os.path.exists(assembly_path):
-                assembly_path = os.path.join(args.assembly_dir, f"{accession}.fa")
-            if not os.path.exists(assembly_path):
-                print(f"Missing assembly for accession {accession} (for top-up)")
-                continue
-            seqs = extract_random_nonoverlapping_sequences(assembly_path, n=n_needed, seq_len=args.subseq_length)
-            print(f"Topping up accession {accession}: extracted {len(seqs)} additional non-overlapping {args.subseq_length}bp sequences.")
-            if phenotype is None and not args.test_set:
-                print(f"Warning: phenotype not found for accession {accession} (for top-up)")
-                continue
-            normalized_num_hits = normalize_num_hits(num_hits)
-            if not args.test_set:
-                all_data.extend([(seq, normalized_num_hits, accession, species, antibiotic, phenotype) for seq in seqs])
-            else:
-                all_data.extend([(seq, normalized_num_hits, accession, species, antibiotic) for seq in seqs])
+                n_needed = args.min_seqs - num_hits
+                assembly_path = os.path.join(args.assembly_dir, f"{accession}.fasta")
+                if not os.path.exists(assembly_path):
+                    assembly_path = os.path.join(args.assembly_dir, f"{accession}.fa")
+                if not os.path.exists(assembly_path):
+                    print(f"Missing assembly for accession {accession} (for top-up)")
+                    continue
+                seqs = extract_random_nonoverlapping_sequences(assembly_path, n=n_needed, seq_len=args.subseq_length)
+                print(f"Topping up accession {accession}: extracted {len(seqs)} additional non-overlapping {args.subseq_length}bp sequences.")
+                if phenotype is None and not args.test_set:
+                    print(f"Warning: phenotype not found for accession {accession} (for top-up)")
+                    continue
+                normalized_num_hits = normalize_num_hits(num_hits)
+                if not args.test_set:
+                    all_data.extend([(seq, normalized_num_hits, accession, species, antibiotic, phenotype) for seq in seqs])
+                else:
+                    all_data.extend([(seq, normalized_num_hits, accession, species, antibiotic) for seq in seqs])
 
     if args.shuffle:
         print('Shuffling dataset')
         random.shuffle(all_data)
     
     if not args.test_set:
-        out_df = pd.DataFrame(all_data, columns=["sequence", "num_hits", "accession", "species", "antibiotic", "phenotype"])
+        if args.measurement_value:
+            out_df = pd.DataFrame(all_data, columns=["sequence", "num_hits", "accession", "species", "antibiotic", "measurement_value"])
+        else:
+            out_df = pd.DataFrame(all_data, columns=["sequence", "num_hits", "accession", "species", "antibiotic", "phenotype"])
     else:
         out_df = pd.DataFrame(all_data, columns=["sequence", "num_hits", "accession", "species", "antibiotic"])
-    out_df.to_csv(args.output+'_classifier.csv', index=False)
+
+    if args.measurement_value:
+        out_df.to_csv(args.output+'_regression.csv', index=False)
+    else:
+        out_df.to_csv(args.output+'_classifier.csv', index=False)
     print(f"Saved {len(out_df)} sequences to {args.output}")
 
     """finetune_df = out_df.drop(columns=["num_hits", "accession"])

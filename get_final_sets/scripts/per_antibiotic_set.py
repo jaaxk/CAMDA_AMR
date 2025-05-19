@@ -29,9 +29,9 @@ def per_antibiotic_set(input_dir, output_dir):
         print(f'train length: {len(train_df_antibiotic)}')
         print(f'dev length: {len(dev_df_antibiotic)}')
         print(f'test length: {len(test_df_antibiotic)}')
-        print(f'train pheno distribution: {train_df_antibiotic["phenotype"].value_counts()}')
-        print(f'dev pheno distribution: {dev_df_antibiotic["phenotype"].value_counts()}')
-        print(f'test pheno distribution: {test_df_antibiotic["phenotype"].value_counts()}')
+        #print(f'train pheno distribution: {train_df_antibiotic["phenotype"].value_counts()}')
+        #print(f'dev pheno distribution: {dev_df_antibiotic["phenotype"].value_counts()}')
+        #print(f'test pheno distribution: {test_df_antibiotic["phenotype"].value_counts()}')
         print(train_df_antibiotic.head())
         print()
         

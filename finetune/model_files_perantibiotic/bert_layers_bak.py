@@ -822,6 +822,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
         super().__init__(config)
 
         print('Initializing CUSTOM BertForSequenceClassification')
+
         self.num_labels = config.num_labels
         self.config = config
 
@@ -846,8 +847,6 @@ class BertForSequenceClassification(BertPreTrainedModel):
             nn.ReLU(),
             nn.Linear(128, config.num_labels)
         )
-
-        print(f'PROBLEM TYPE: {self.config.problem_type}')
 
         """self.classifier = nn.Sequential(
             nn.Linear(config.hidden_size + 2, 256),
@@ -940,7 +939,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
                 #print('PERFORMING REGRESSION')
             elif self.config.problem_type == 'single_label_classification':
                 if class_weights is not None:
-                    loss_fct = nn.CrossEntropyLoss() #weight=class_weights)
+                    loss_fct = nn.CrossEntropyLoss(weight=class_weights)
                 else:
                     loss_fct = nn.CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels),

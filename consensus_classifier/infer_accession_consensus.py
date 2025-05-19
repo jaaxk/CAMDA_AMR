@@ -11,6 +11,7 @@ import ast
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import json
 
 import importlib.util
 import sys
@@ -29,6 +30,7 @@ def main():
     parser.add_argument('--test_csv', type=str, required=True, help='Path to test CSV')
     parser.add_argument('--output_csv', type=str, required=True, help='Path to output CSV (accession, predicted_phenotype, true_phenotype)')
     parser.add_argument('--model_max_length', type=int, default=250)
+    parser.add_argument('--run_name', type=str)
     args = parser.parse_args()
 
 
@@ -87,7 +89,8 @@ def main():
             df.groupby('accession')
             .agg(
                 pred_phenotype_idx=('pred_phenotype_idx', lambda x: x.mode().iloc[0]),
-                phenotype_idx=('phenotype', 'first')
+                phenotype_idx=('phenotype', 'first'),
+                species=('species', 'first')
             )
             .reset_index()
         )
@@ -103,6 +106,26 @@ def main():
     acc_preds['true_phenotype'] = acc_preds['phenotype_idx'].map(idx_to_pheno)
     acc_preds[['accession', 'pred_phenotype', 'true_phenotype']].to_csv(args.output_csv, index=False)
 
+    species_mapping = {
+    'klebsiella_pneumoniae': 0,
+    'streptococcus_pneumoniae': 1,
+    'escherichia_coli': 2,
+    'campylobacter_jejuni': 3,
+    'salmonella_enterica': 4,
+    'neisseria_gonorrhoeae': 5,
+    'staphylococcus_aureus': 6,
+    'pseudomonas_aeruginosa': 7,
+    'acinetobacter_baumannii': 8
+    }
+
+    species_level_acc = {}
+    for species, idx in species_mapping.items():
+        species_acc_df = acc_preds[acc_preds['species'] == idx]
+        species_level_acc[species] = np.mean(np.array(species_acc_df['pred_phenotype']) == np.array(species_acc_df['true_phenotype']))
+
+    with open(f'{args.run_name}_full_model_species_level_acc.json', 'w') as f:
+        json.dump(species_level_acc, f)
+
     # --- Output test accession stats ---
     test_acc_stats = test_df.groupby('accession').agg(
         num_hits=('num_hits', 'first'),
@@ -114,7 +137,7 @@ def main():
         pred_phenotype=('pred_phenotype_idx', lambda x: x.mode().iloc[0])
     ).reset_index()
     test_acc_stats['pred_phenotype'] = test_acc_stats['pred_phenotype'].map(idx_to_pheno)
-    model_name = args.model_dir.split('/')[-2]
+    model_name = args.run_name
     test_acc_stats.to_csv(f'/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/consensus_classifier/stats/{model_name}_test_accession_stats.csv', index=False)
 
     # Evaluate
@@ -136,7 +159,7 @@ def main():
     model_path = args.model_dir
     data_path = args.test_csv
     row = {
-        'model_name': model_name,
+        'model_name': run_name,
         'model_path': model_path,
         'data_path': data_path,
         'accession_accuracy': float(acc),

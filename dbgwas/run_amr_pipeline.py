@@ -22,7 +22,7 @@ DEFAULT_SPECIES = [
 ]
 
 class AMRPipeline:
-    def __init__(self, metadata_path, base_dir, threads=96, species=None, subseq_length=1000, min_seqs=None, blast_identity=None, dbgwas_sig_level=None, contigs_dir=None, test_set=False):
+    def __init__(self, metadata_path, base_dir, threads=96, species=None, subseq_length=1000, min_seqs=None, blast_identity=None, dbgwas_sig_level=None, contigs_dir=None, test_set=False, measurement_value=False):
         self.metadata_path = metadata_path
         self.base_dir = Path(base_dir)
         self.threads = threads
@@ -34,6 +34,7 @@ class AMRPipeline:
         self.dbgwas_sig_level = dbgwas_sig_level
         self.contigs_dir = Path(contigs_dir)
         self.test_set = test_set
+        self.measurement_value = measurement_value
 
         self.metadata_df['genus_species'] = self.metadata_df['genus'].str.lower() + '_' + self.metadata_df['species'].str.lower()
 
@@ -223,7 +224,8 @@ class AMRPipeline:
                f"--species '{species}' "
                f'--subseq_length {self.subseq_length} '
                f'--min_seqs {self.min_seqs} '
-               f'--test_set {self.test_set}')
+               f'{"--test_set " if self.test_set else ""}'
+               f'{"--measurement_value " if self.measurement_value else ""}').strip()
 
         print(cmd)
         
@@ -264,31 +266,31 @@ class AMRPipeline:
             else:
                 print(f" BLAST already completed for {species}")
             
-            if not self.test_set:
-                if not os.path.exists(f'{full_dir_name}/{dir_name}_train_dataset_classifier.csv'):
-                    self.get_train_dataset(species, dir_name, contigs_path) # extract flanking sequences
+            if self.measurement_value:
+                if not self.test_set:
+                    dataset_path = f'{full_dir_name}/{dir_name}_train_dataset_regression.csv'
                 else:
-                    print(f" Training dataset already extracted for {species}")
+                    dataset_path = f'{full_dir_name}/{dir_name}_test_dataset_regression.csv'
+            elif not self.test_set:
+                dataset_path = f'{full_dir_name}/{dir_name}_train_dataset_classifier.csv'
             else:
-                if not os.path.exists(f'{full_dir_name}/{dir_name}_test_dataset_classifier.csv'):
-                    self.get_train_dataset(species, dir_name, contigs_path) # extract flanking sequences
-                else:
-                    print(f" Test dataset already extracted for {species}")
+                dataset_path = f'{full_dir_name}/{dir_name}_test_dataset_classifier.csv'
+            print(dataset_path)
+            if not os.path.exists(dataset_path):
+                self.get_train_dataset(species, dir_name, contigs_path) # extract flanking sequences
+            else:
+                print(f" Training dataset already extracted for {species}")
 
             print(f"\n✅ Successfully completed pipeline for {species}")
 
-            if not self.test_set:
-                df = pd.read_csv(f'{full_dir_name}/{dir_name}_train_dataset_classifier.csv')
+            try:
+                df = pd.read_csv(dataset_path)
                 num_unique_accs = len(df['accession'].unique())
                 print(f" Number of unique accessions in training dataset: {num_unique_accs}")
                 if num_unique_accs < 500:
                     print(f" WARNING: Not enough unique accessions in training dataset for {species} !!!!")
-            else:
-                df = pd.read_csv(f'{full_dir_name}/{dir_name}_test_dataset_classifier.csv')
-                num_unique_accs = len(df['accession'].unique())
-                print(f" Number of unique accessions in test dataset: {num_unique_accs}")
-                if num_unique_accs < 500:
-                    print(f" WARNING: Not enough unique accessions in test dataset for {species} !!!!")
+            except Exception as e:
+                print(f" Error reading dataset: {e}")
 
                 
 
@@ -319,6 +321,8 @@ def main():
                       help="Directory containing contigs", default="/gpfs/scratch/jvaska/CAMDA_AMR/CAMDA_AMR/de_novo_assembly/contigs_by_species")
     parser.add_argument("--test_set", action="store_true", default=False,
                       help="Run on for test set (no ground truth)")
+    parser.add_argument("--measurement_value", action="store_true", default=False,
+                      help='make dataset with measurement value instead of phenotype')
     
     args = parser.parse_args()
     
@@ -333,7 +337,8 @@ def main():
         blast_identity=args.blast_identity,
         dbgwas_sig_level=args.dbgwas_sig_level,
         contigs_dir=args.contigs_dir,
-        test_set=args.test_set
+        test_set=args.test_set,
+        measurement_value=args.measurement_value
     )
     
     pipeline.run_pipeline()
