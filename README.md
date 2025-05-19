@@ -1,5 +1,6 @@
 # Antimicrobial Resistance Prediction using DBGWAS and DNABERT2
 ## CAMDA AMR Challenge 2025
+This work as well as an extended abstract have been submitted to the Critical Assessment of Massive Data Analysis (CAMDA) 2025 conference
 ### Workflow:
 1. `training_dataset.csv` and `testing_dataset_reduced.csv` were downloaded from the [CAMDA website](https://bipress.boku.ac.at/camda2025/the-camda-contest-challenges/)
 2. `test_accessions.txt` and `train_accessions.txt` were extracted from these datasets using `metadata/get_accessions.py`
