@@ -12,14 +12,15 @@
 9. [DBGWAS](https://gitlab.com/leoisl/dbgwas) was run on the assemblies each 9 species, the significant sequences were then extracted and BLASTed back to the original assemblies, and 1000bp subsequences surrounding each sequence were extracted. `dbgwas/run_amr_pipeline.py`
     - For accessions with no BLAST hits (mostly susceptible phenotypes), 55 random 1000bp subsequences were taken from the assembly/reads
     - A dataset was created for each of the 9 species including sequence, num_hits (BLAST hits of significant sequences), accession, species, phenotype
-10. Each species dataset was pooled into one and grouped by antibiotic
+10. Species datasets were pooled together and grouped by antibiotic
     - Invalid seqs were removed (not containing A,C,T or G)
     - Susceptible phenotype rows were augmented 2x by getting reverse complement
     - Data was split into train/test/dev sets with an 80/10/10 split based on randomized accessions in `get_final_sets/train_test_dev_accs` (stratified by phenotype)
-11. A [pretrained DNABERT2 model on human bacterial genomes](https://github.com/jaaxk/DNABERT-M/) (using [MGNify](https://www.ebi.ac.uk/metagenomics) database) was finetuned on the above dataset with extra features `num_hits` and `species`
+    - `export DATA_DIR=path/to/9/species/datasets export FINAL_DATASET_PATH=path/to/output cd get_final_sets/scripts get_final_classifier_set.py per_antibiotic_set.py $FINAL_DATASET_PATH path/to/final/output`
+12. A [pretrained DNABERT2 model on human bacterial genomes](https://github.com/jaaxk/DNABERT-M/) (using [MGNify](https://www.ebi.ac.uk/metagenomics) database) was finetuned on the above dataset with extra features `num_hits` and `species`
     - `species` was projected to an 8 dimensional embedding
     - species embedding and num_hits were concatenated with the 768-dim DNABERT2 embedding for finetuning `get_final_sets/run_finetune_ddp_perantibiotic.slurm`
-12. Predictions were made by grouping by accession and taking consensus prediction of all rows in accession `consensus_classifier/infer_perantibiotic.py`
+13. Predictions were made by grouping by accession and taking consensus prediction of all rows in accession `consensus_classifier/infer_perantibiotic.py`
  
 ### Training:
 1. Make conda environment from `finetune/dna_env_2.yml`
