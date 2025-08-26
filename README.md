@@ -1,6 +1,7 @@
 # Antimicrobial Resistance Prediction using DBGWAS and DNABERT2
 ## CAMDA AMR Challenge 2025
-This work as well as an extended abstract have been submitted to the Critical Assessment of Massive Data Analysis (CAMDA) 2025 conference
+This work as well as an [extended abstract](https://github.com/jaaxk/CAMDA_AMR/blob/main/AMR_extended_abstract.pdf) were presented at ISMB/ECCB 2025 as part of the Critical Assessment of Massive Data Analysis (CAMDA) COSI. [Click here for the presentation](https://github.com/jaaxk/CAMDA_AMR/blob/main/CAMDA_Presentation_Final.pdf)
+
 ### Workflow:
 1. `training_dataset.csv` and `testing_dataset_reduced.csv` were downloaded from the [CAMDA website](https://bipress.boku.ac.at/camda2025/the-camda-contest-challenges/)
 2. `test_accessions.txt` and `train_accessions.txt` were extracted from these datasets using `metadata/get_accessions.py`
@@ -38,4 +39,4 @@ This work as well as an extended abstract have been submitted to the Critical As
 
 ### Performance
 - The per antibiotic models performed with 84.5% accuracy on the testing subset of the training set and 82.8% on the CAMDA-provided test set
-- For more, see the [extended abstract]()
+- For more, see the [extended abstract](https://github.com/jaaxk/CAMDA_AMR/blob/main/AMR_extended_abstract.pdf)
