@@ -1,3 +1,8 @@
+## This repository was used for development and is deprecated. For an updated and cleaner implementation of this project, [refer to this repository](https://github.com/jaaxk/AMR_v2)
+
+## For a Nextflow implementation (inference only) [refer to this repository](https://github.com/jaaxk/CAMDA-AMR-Nextflow-Pipeline)
+
+
 # Antimicrobial Resistance Prediction using DBGWAS and DNABERT2
 ## CAMDA AMR Challenge 2025
 This work as well as an [extended abstract](https://github.com/jaaxk/CAMDA_AMR/blob/main/AMR_extended_abstract.pdf) were presented at ISMB/ECCB 2025 as part of the Critical Assessment of Massive Data Analysis (CAMDA) COSI. [Click here for the presentation](https://github.com/jaaxk/CAMDA_AMR/blob/main/CAMDA_Presentation_Final.pdf)
